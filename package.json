@@ -1,0 +1,14 @@
+{
+  "name": "groot-contracts",
+  "version": "1.0.0",
+  "description": "Smart Contracts for audit",
+  "main": "index.js",
+  "scripts": {
+    "test": "npm test"
+  },
+  "author": "@camdengrieh",
+  "license": "MIT",
+  "dependencies": {
+    "@openzeppelin/contracts": "^4.8.3"
+  }
+}
