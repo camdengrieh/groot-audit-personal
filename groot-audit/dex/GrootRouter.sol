@@ -614,7 +614,7 @@ interface IWXDC {
 contract GrootRouter is IGrootRouter02 {
     using SafeMath for uint256;
 
-    address public immutable override factory;
+    address public immutable override factory; //@audit-ok Uses immutable
     address public immutable override WTOKEN;
 
     modifier ensure(uint256 deadline) {
@@ -941,18 +941,19 @@ contract GrootRouter is IGrootRouter02 {
     // **** SWAP ****
     // requires the initial amount to have already been sent to the first pair
     function _swap(
+        //@audit - Use calldata here instead of memory
         uint256[] memory amounts,
         address[] memory path,
         address _to
     ) internal virtual {
-        for (uint256 i; i < path.length - 1; i++) {
+        for (uint256 i; i < path.length - 1; ++i) { //@audit - use pre-increment here
             (address input, address output) = (path[i], path[i + 1]);
             (address token0, ) = GrootLibrary.sortTokens(input, output);
             uint256 amountOut = amounts[i + 1];
             (uint256 amount0Out, uint256 amount1Out) = input == token0
                 ? (uint256(0), amountOut)
                 : (amountOut, uint256(0));
-            address to = i < path.length - 2
+            address to = i < path.length - 2 //@audit - Could we use unchecked here?
                 ? GrootLibrary.pairFor(factory, output, path[i + 2])
                 : _to;
             IGrootPair(GrootLibrary.pairFor(factory, input, output)).swap(
@@ -1047,6 +1048,7 @@ contract GrootRouter is IGrootRouter02 {
         _swap(amounts, path, to);
     }
 
+    //@audit - Could we use unchecked here?
     function swapTokensForExactXDC(
         uint256 amountOut,
         uint256 amountInMax,
@@ -1142,7 +1144,7 @@ contract GrootRouter is IGrootRouter02 {
         address[] memory path,
         address _to
     ) internal virtual {
-        for (uint256 i; i < path.length - 1; i++) {
+        for (uint256 i; i < path.length - 1; i++) { //@audit Gas - Pre-incrementation?
             (address input, address output) = (path[i], path[i + 1]);
             (address token0, ) = GrootLibrary.sortTokens(input, output);
             IGrootPair pair = IGrootPair(

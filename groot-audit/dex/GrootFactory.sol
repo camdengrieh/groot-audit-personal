@@ -625,7 +625,7 @@ contract GrootPair is IGrootPair, GrootXDC20 {
     }
 
     // force balances to match reserves
-    function skim(address to) external lock {
+    function skim(address to) external lock { //@audit - Use openzeppelins nonReentrant modifier
         address _token0 = token0; // gas savings
         address _token1 = token1; // gas savings
         _safeTransfer(
