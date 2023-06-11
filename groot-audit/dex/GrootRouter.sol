@@ -27,7 +27,6 @@ interface IGrootFactory {
     function createPair(address tokenA, address tokenB)
         external
         returns (address pair);
-
     function setFeeTo(address) external;
 
     function setFeeToSetter(address) external;
@@ -941,7 +940,6 @@ contract GrootRouter is IGrootRouter02 {
     // **** SWAP ****
     // requires the initial amount to have already been sent to the first pair
     function _swap(
-        //@audit - Use calldata here instead of memory
         uint256[] memory amounts,
         address[] memory path,
         address _to

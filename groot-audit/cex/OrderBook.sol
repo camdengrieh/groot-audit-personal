@@ -7,13 +7,19 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract OrderBook {
 
-    using SafeMath for uint;
+    using SafeMath for uint; //@audit Gas - no longer required in Solidity 0.8.0 because it has internal overflow / underflow checks
 
+    //@audit Gas - This cannot be changed after deployment, so it should be immutable
     address public percentageForwardAddress;
+    //@audit-info underscores are generally used for private variables
+    //@audit This should be immutable
+    //@audit Gas - bytes32 is cheaper than string
     string public _symbol;
 
+    //@audit 
     address payable public owner;
 
+    //@audit Gas - Use storage slot packing to save gas
     struct orderBookStruct{
         address _address;
         uint256 _amountIn;
@@ -24,13 +30,15 @@ contract OrderBook {
         string _orderType;
     }
     
-    constructor(address _percentageForwardAddress, string memory __symbol) {
+    //@audit-info double underscore? hard to read?
+    constructor(address _percentageForwardAddress, string memory _symbol) {
         percentageForwardAddress = _percentageForwardAddress;
         owner = payable(_percentageForwardAddress);
-        _symbol = __symbol;
+        symbol = _symbol;
     } 
 
     event Received(address, uint);
+    //@audit-info - Events should use UpperCamelCase
     event buyPairsData(address _address, uint256 _amount, address[] _pairAAddress, uint256 _transferAmount);
 
     receive() external payable {
@@ -41,6 +49,7 @@ contract OrderBook {
 
     mapping(address=>mapping(string=>mapping(string=>orderBookStruct))) public orderBookWithNoPair;
 
+    //@audit-info - Events should use UpperCamelCase
     event cancelOrder(address[] pairs, uint256[] pairsAmount, address _user);
     event limitOrderBook(address[] pairs, uint256[] pairsAmount, address indexed userAddress, string ordertype);
     event buySelllimitOrderBook(address userAddressA, address userAddressB, address[] pairAddressA,address[] pairAddressB,uint256[] pairsAmountA,uint256[] pairsAmountB);
@@ -116,6 +125,7 @@ contract OrderBook {
         if(keccak256(abi.encodePacked(_pairsNames[0])) == keccak256(abi.encodePacked(_symbol))){
             require(address(this).balance >= orderBook[msg.sender][_pairs[0]][_pairs[1]]._amountIn, "we have insufficient amount please try again later");
 
+            //@audit Gas - This check should be at the top level of the stack
             require(orderBook[msg.sender][_pairs[0]][_pairs[1]]._address == msg.sender,"You have not set order");
             uint256 amountA = orderBook[msg.sender][_pairs[0]][_pairs[1]]._amountIn;
             payable(msg.sender).transfer(amountA);

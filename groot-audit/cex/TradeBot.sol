@@ -8,12 +8,13 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract TradeBot {
 
-    using SafeMath for uint;
+    using SafeMath for uint; //@audit Gas - no longer required in Solidity 0.8.0 because it has internal overflow / underflow checks
 
-    address public percentageForwardAddress;
+    address public percentageForwardAddress; //@audit Gas - make immutable as the variable cannot be changed after deployment
 
     address payable public owner;
 
+    //@audit Gas - Use storage slot packing to save gas
     struct orderBookStruct{
         address _address;
         uint256 _amountIn;

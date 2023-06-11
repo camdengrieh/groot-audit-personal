@@ -232,7 +232,7 @@ contract ActivePool is
 	}
 
 	//@audit - Critical: It allows anyone to withdraw ETH from the contract. Consider adding access permissions to this function, and only for balance that is not recorded in assetsBalance[ETH_REF_ADDRESS], or removing it entirely
-	function withdrawETH(uint256 _amount) public  {
+	function withdrawETH(uint256 _amount) public {
 		require(address(this).balance >= _amount, "Insufficient balance.");
 		payable(msg.sender).transfer(_amount);
 	}
