@@ -20,6 +20,7 @@ contract PresaleSettings is Ownable {
     
     EnumerableSet.AddressSet private ALLOWED_REFERRERS;
     
+    //@audit Gas - Storage slot packing
     struct Settings {
         uint256 BASE_FEE; // base fee divided by 1000
         uint256 TOKEN_FEE; // token fee divided by 1000
@@ -33,6 +34,7 @@ contract PresaleSettings is Ownable {
     
     Settings public SETTINGS;
     
+    //@audit Gas - If they're predefined, make them immutable with constructor or constant and declare without constructor.
     constructor() public {
         SETTINGS.BASE_FEE = 18; // 1.8%
         SETTINGS.TOKEN_FEE = 18; // 1.8%
@@ -116,9 +118,12 @@ contract PresaleSettings is Ownable {
     // there will never be more than 10 items in this array. Care for gas limits will be taken.
     // We are aware too many tokens in this unbounded array results in out of gas errors.
     function userHoldsSufficientRound1Token (address _user) external view returns (bool) {
+        //@audit store earlyAccessTokensLength() in a local variable to save gas, and access the length of the array only once from storage. Access the local variable instead
         if (earlyAccessTokensLength() == 0) {
             return true;
         }
+        //@audit Gas - Initialisation of default values. Use uint i, instead of uint i = 0
+        //@audit Gas - Use pre-increment instead of post-increment
         for (uint i = 0; i < earlyAccessTokensLength(); i++) {
           (address token, uint256 amountHold) = getEarlyAccessTokenAtIndex(i);
           if (IERC20(token).balanceOf(_user) >= amountHold) {

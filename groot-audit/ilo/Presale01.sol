@@ -56,12 +56,13 @@ interface IPresaleSettings {
 }
 
 contract Presale01 is ReentrancyGuard {
-  using SafeMath for uint256;
+  using SafeMath for uint256; //@audit - Gas - SafeMath is not needed in Solidity 0.8.0 and above
   using EnumerableSet for EnumerableSet.AddressSet;
   
   /// @notice Presale Contract Version, used to choose the correct ABI to decode the contract
   uint256 public CONTRACT_VERSION = 1;
   
+  //@audit Gas - Storage slot packing
   struct PresaleInfo {
     address payable PRESALE_OWNER;
     IERC20 S_TOKEN; // sale token
@@ -79,6 +80,7 @@ contract Presale01 is ReentrancyGuard {
     bool PRESALE_IN_ETH; // if this flag is true the presale is raising ETH, otherwise an ERC20 token such as DAI
   }
   
+  //@audit Gas - Storage slot packing
   struct PresaleFeeInfo {
     uint256 GROOT_BASE_FEE; // divided by 1000
     uint256 GROOT_TOKEN_FEE; // divided by 1000
@@ -88,6 +90,7 @@ contract Presale01 is ReentrancyGuard {
     address payable REFERRAL_FEE_ADDRESS; // if this is not address(0), there is a valid referral
   }
   
+  //@audit Gas - Storage slot packing
   struct PresaleStatus {
     bool WHITELIST_ONLY; // if set to true only whitelisted members may participate
     bool LP_GENERATION_COMPLETE; // final flag required to end a presale and enable withdrawls
@@ -100,6 +103,7 @@ contract Presale01 is ReentrancyGuard {
     uint256 NUM_BUYERS; // number of unique participants
   }
 
+  //@Gas - Storage slot packing
   struct BuyerInfo {
     uint256 baseDeposited; // total base token (usually ETH) deposited by user, can be withdrawn on presale failure
     uint256 tokensOwed; // num presale tokens a user is owed, can be withdrawn on presale success
@@ -111,19 +115,20 @@ contract Presale01 is ReentrancyGuard {
   address public PRESALE_GENERATOR;
   IPresaleLockForwarder public PRESALE_LOCK_FORWARDER;
   IPresaleSettings public PRESALE_SETTINGS;
-  address GROOT_DEV_ADDRESS;
+  address GROOT_DEV_ADDRESS; //@audit - Gas - Make Constant or immutable if set in the constructor and cannot be changed 
   IGrootswapFactory public Groot_FACTORY;
-  IWETH public WETH;
+  IWETH public WETH; //@audit - Gas - Make Constant or immutable if set in the constructor
   mapping(address => BuyerInfo) public BUYERS;
   EnumerableSet.AddressSet private WHITELIST;
 
+  //@audit-info - Assuming the addresses are not set because the contracts have not been deployed yet, however it is advised to make the variables constant or immutable if they cannot be changed
   constructor(address _presaleGenerator) public {
     PRESALE_GENERATOR = _presaleGenerator;
-    Groot_FACTORY = IGrootswapFactory();
+    Groot_FACTORY = IGrootswapFactory(); //@audit Critical -  No address set
     WETH = IWETH(0xae13d989daC2f0dEbFf460aC112a837C89BAa7cd);
-    PRESALE_SETTINGS = IPresaleSettings();
-    PRESALE_LOCK_FORWARDER = IPresaleLockForwarder();
-    GROOT_DEV_ADDRESS = ;
+    PRESALE_SETTINGS = IPresaleSettings(); //@audit Critical -  No address set
+    PRESALE_LOCK_FORWARDER = IPresaleLockForwarder(); //@audit Critical -  No address set
+    GROOT_DEV_ADDRESS = ; //@audit Critical -  No address set
   }
   
   function init1 (
@@ -187,6 +192,9 @@ contract Presale01 is ReentrancyGuard {
   }
   
   function presaleStatus () public view returns (uint256) {
+
+    //@note - Check this later
+    //@audit-info Gas - Check what would be more likely first to save gas. Should check if the presale is active first, then check if it's failed, then check if it's succeeded, as deposits will be enabled for the first two
     if (STATUS.FORCE_FAILED) {
       return 3; // FAILED - force fail
     }
@@ -219,6 +227,7 @@ contract Presale01 is ReentrancyGuard {
     BuyerInfo storage buyer = BUYERS[msg.sender];
     uint256 amount_in = PRESALE_INFO.PRESALE_IN_ETH ? msg.value : _amount;
     uint256 allowance = PRESALE_INFO.MAX_SPEND_PER_BUYER.sub(buyer.baseDeposited);
+    @audit - Gas - Use unchecked here to save gas
     uint256 remaining = PRESALE_INFO.HARDCAP - STATUS.TOTAL_BASE_COLLECTED;
     allowance = allowance > remaining ? remaining : allowance;
     if (amount_in > allowance) {
@@ -227,6 +236,7 @@ contract Presale01 is ReentrancyGuard {
     uint256 tokensSold = amount_in.mul(PRESALE_INFO.TOKEN_PRICE).div(10 ** uint256(PRESALE_INFO.B_TOKEN.decimals()));
     require(tokensSold > 0, 'ZERO TOKENS');
     if (buyer.baseDeposited == 0) {
+      //@audit Gas - Use unchecked here to save gas
         STATUS.NUM_BUYERS++;
     }
     buyer.baseDeposited = buyer.baseDeposited.add(amount_in);
@@ -246,9 +256,12 @@ contract Presale01 is ReentrancyGuard {
   
   // withdraw presale tokens
   // percentile withdrawls allows fee on transfer or rebasing tokens to still work
+  //@audit-ok - Users cannot withdraw tokens until the presale has ended and the LP has been generated. Potential edge case to be considered to allow refunds of the base token if the presale fails
+
   function userWithdrawTokens () external nonReentrant {
     require(STATUS.LP_GENERATION_COMPLETE, 'AWAITING LP GENERATION');
     BuyerInfo storage buyer = BUYERS[msg.sender];
+    //@audit-info - Does the Total Tokens Sold minus the Total Tokens Withdrawn equal the number of tokens remaining?
     uint256 tokensRemainingDenominator = STATUS.TOTAL_TOKENS_SOLD.sub(STATUS.TOTAL_TOKENS_WITHDRAWN);
     uint256 tokensOwed = PRESALE_INFO.S_TOKEN.balanceOf(address(this)).mul(buyer.tokensOwed).div(tokensRemainingDenominator);
     require(tokensOwed > 0, 'NOTHING TO WITHDRAW');
@@ -273,6 +286,8 @@ contract Presale01 is ReentrancyGuard {
   
   // on presale failure
   // allows the owner to withdraw the tokens they sent for presale & initial liquidity
+
+  //@audit-info - Ensure that users cannot withdraw tokens before this is called, otherwise the team that initiated the presale cannot withdraw their initial token deposit
   function ownerWithdrawTokens () external onlyPresaleOwner {
     require(presaleStatus() == 3); // FAILED
     TransferHelper.safeTransfer(address(PRESALE_INFO.S_TOKEN), PRESALE_INFO.PRESALE_OWNER, PRESALE_INFO.S_TOKEN.balanceOf(address(this)));
@@ -283,6 +298,10 @@ contract Presale01 is ReentrancyGuard {
   // If the pair already exists on grootswap and it contains the presale token as liquidity 
   // the final stage of the presale 'addLiquidity()' will fail. This function 
   // allows anyone to end the presale prematurely to release funds in such a case.
+
+  //@audit Medium - Potentially DOS, since anyone can call the createPair function on the GrootswapFactory contract
+  //@audit Medium - Anyone can call this function, which could cause the presale to end prematurely
+  // @audit - possibly should be internal
   function forceFailIfPairExists () external {
     require(!STATUS.LP_GENERATION_COMPLETE && !STATUS.FORCE_FAILED);
     if (PRESALE_LOCK_FORWARDER.grootswapPairIsInitialised(address(PRESALE_INFO.S_TOKEN), address(PRESALE_INFO.B_TOKEN))) {
@@ -300,6 +319,11 @@ contract Presale01 is ReentrancyGuard {
   // This function does not use percentile distribution. Rebasing mechanisms, fee on transfers, or any deflationary logic
   // are not taken into account at this stage to ensure stated liquidity is locked and the pool is initialised according to 
   // the presale parameters and fixed prices.
+
+
+  //@audit Medium - Potentially DOS, since anyone can call the createPair function on the GrootswapFactory contract
+  //@audit Medium - Anyone can call this function, which could cause the presale to end prematurely
+  //@audit-info - Ensure the function cannot be front-run to add liquidity with a bad rate
   function addLiquidity() external nonReentrant {
     require(!STATUS.LP_GENERATION_COMPLETE, 'GENERATION COMPLETE');
     require(presaleStatus() == 2, 'NOT SUCCESS'); // SUCCESS
@@ -327,6 +351,7 @@ contract Presale01 is ReentrancyGuard {
     // transfer fees
     uint256 grootTokenFee = STATUS.TOTAL_TOKENS_SOLD.mul(PRESALE_FEE_INFO.GROOT_TOKEN_FEE).div(1000);
     // referrals are checked for validity in the presale generator
+    //@audit-info - Ensure that the referral system cannot be sybil attacked / gamed
     if (PRESALE_FEE_INFO.REFERRAL_FEE_ADDRESS != address(0)) {
         // Base token fee
         uint256 referralBaseFee = grootBaseFee.mul(PRESALE_FEE_INFO.REFERRAL_FEE).div(1000);
@@ -341,9 +366,11 @@ contract Presale01 is ReentrancyGuard {
     TransferHelper.safeTransfer(address(PRESALE_INFO.S_TOKEN), PRESALE_FEE_INFO.TOKEN_FEE_ADDRESS, grootTokenFee);
     
     // burn unsold tokens
+    //@audit-info Typo - 'remainingSBalance' should be 'remainingBalance'
     uint256 remainingSBalance = PRESALE_INFO.S_TOKEN.balanceOf(address(this));
     if (remainingSBalance > STATUS.TOTAL_TOKENS_SOLD) {
         uint256 burnAmount = remainingSBalance.sub(STATUS.TOTAL_TOKENS_SOLD);
+        //@audit Low - Ensure the burn address is address(0) not 'dead' - This is for tracking TotalSupply accurately
         TransferHelper.safeTransfer(address(PRESALE_INFO.S_TOKEN), 0x000000000000000000000000000000000000dEaD, burnAmount);
     }
     
@@ -369,12 +396,15 @@ contract Presale01 is ReentrancyGuard {
   }
 
   // editable at any stage of the presale
+  //@audit - Low - Potential for bad presale owners to change who is allowed to buy in the presale arbitrarily, potential for abuse
   function setWhitelistFlag(bool _flag) external onlyPresaleOwner {
     STATUS.WHITELIST_ONLY = _flag;
   }
 
   // editable at any stage of the presale
   function editWhitelist(address[] memory _users, bool _add) external onlyPresaleOwner {
+    //@audit Gas - Initialisation of default values - Use uint i, instead of uint i = 0
+    //@audit Gas - Use pre incrementation instead of post incrementation
     if (_add) {
         for (uint i = 0; i < _users.length; i++) {
           WHITELIST.add(_users[i]);

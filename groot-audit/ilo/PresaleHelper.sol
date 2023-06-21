@@ -6,7 +6,7 @@ pragma solidity 0.6.12;
 import "./SafeMath.sol";
 
 library PresaleHelper {
-    using SafeMath for uint256;
+    using SafeMath for uint256; SafeMath is not needed in the contract with solidity 0.8.0
     
     function calculateAmountRequired (uint256 _amount, uint256 _tokenPrice, uint256 _listingRate, uint256 _liquidityPercent, uint256 _tokenFee) public pure returns (uint256) {
         uint256 listingRatePercent = _listingRate.mul(1000).div(_tokenPrice);

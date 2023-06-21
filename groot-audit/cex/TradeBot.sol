@@ -14,7 +14,7 @@ contract TradeBot {
 
     address payable public owner;
 
-    //@audit Gas - Use storage slot packing to save gas
+    //@audit Gas - Use storage slot packing to save gas 
     struct orderBookStruct{
         address _address;
         uint256 _amountIn;

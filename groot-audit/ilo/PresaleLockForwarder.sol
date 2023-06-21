@@ -83,9 +83,13 @@ interface IGrootswapPair {
 contract PresaleLockForwarder is Ownable {
     
     IPresaleFactory public PRESALE_FACTORY;
+    // @audit Grootswap Locker and Factory do not exist in 
+    // the entire master repo
     IGrootswapLocker public GROOTSWAP_LOCKER;
     IGrootswapFactory public GROOTSWAP_FACTORY;
     
+    //@audit-info - The addresses have not been set, make sure they're set in production. Also make the variables they're set to - immutable or constant and declare without constructor.
+
     constructor() public {
         PRESALE_FACTORY = IPresaleFactory();
         GROOTSWAP_LOCKER = IGrootswapLocker();
@@ -103,6 +107,7 @@ contract PresaleLockForwarder is Ownable {
             return false;
         }
         uint256 balance = IERC20(_token0).balanceOf(pairAddress);
+        //@audit Gas - Using !0 instead of > 0 can be cheaper in gas in some versions of solidity
         if (balance > 0) {
             return true;
         }
@@ -110,6 +115,7 @@ contract PresaleLockForwarder is Ownable {
     }
     
     function lockLiquidity (IERC20 _baseToken, IERC20 _saleToken, uint256 _baseAmount, uint256 _saleAmount, uint256 _unlock_date, address payable _withdrawer) external {
+        //@audit-info Ensure that the correct presale contracts can be registered in the factory
         require(PRESALE_FACTORY.presaleIsRegistered(msg.sender), 'PRESALE NOT REGISTERED');
         address pair = GROOTSWAP_FACTORY.getPair(address(_baseToken), address(_saleToken));
         if (pair == address(0)) {
@@ -124,7 +130,11 @@ contract PresaleLockForwarder is Ownable {
         require(totalLPTokensMinted != 0 , "LP creation failed");
     
         TransferHelper.safeApprove(pair, address(GROOTSWAP_LOCKER), totalLPTokensMinted);
+        // @audit ternary operator test
+        //@audit-info Unlock date is at least - Saturday, 20 November 2286 17:46:39
         uint256 unlock_date = _unlock_date > 9999999999 ? 9999999999 : _unlock_date;
+
+        //@audit This requires the GrootswapLocker contract, its not visible in the repository 
         GROOTSWAP_LOCKER.lockLPToken(pair, totalLPTokensMinted, unlock_date, address(0), true, _withdrawer);
     }
     

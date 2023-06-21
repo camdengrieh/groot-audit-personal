@@ -35,10 +35,11 @@ contract OrderBook {
         percentageForwardAddress = _percentageForwardAddress;
         owner = payable(_percentageForwardAddress);
         symbol = _symbol;
-    } 
+    }
 
     event Received(address, uint);
     //@audit-info - Events should use UpperCamelCase
+    //@audit - This event is never emitted
     event buyPairsData(address _address, uint256 _amount, address[] _pairAAddress, uint256 _transferAmount);
 
     receive() external payable {
