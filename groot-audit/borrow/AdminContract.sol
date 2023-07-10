@@ -62,7 +62,7 @@ contract AdminContract is Ownable, Initializable {
 		stabilityPoolManager = IStabilityPoolManager(_stabilityPoolManager);
 	}
 
-	//Needs to approve Community Issuance to use this function.
+	//@audit-info Needs to approve Community Issuance to use this function.
 	function addNewCollateral(
 		address _stabilityPoolProxyAddress,
 		// address _chainlinkOracle,

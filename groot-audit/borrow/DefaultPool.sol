@@ -19,7 +19,7 @@ import "./Dependencies/Initializable.sol";
  */
 contract DefaultPool is Ownable, CheckContract, Initializable, IDefaultPool {
 	using SafeMath for uint256;
-	using SafeERC20 for IERC20;
+	using SafeERC20 for IERC20; //@audit Gas - SafeMath is not needed for Solidity version 0.8.0 and above
 
 	string public constant NAME = "DefaultPool"; 
 

@@ -23,7 +23,7 @@ contract CommunityIssuance is
 	using SafeMath for uint256;
 	using SafeERC20 for IERC20;
 
-	string public constant NAME = "CommunityIssuance";
+	string public constant NAME = "CommunityIssuance"; //@audit Gas - Not required, takes a storage slot
 	uint256 public constant DISTRIBUTION_DURATION = 7 days / 60;
 	uint256 public constant SECONDS_IN_ONE_MINUTE = 60;
 
@@ -37,7 +37,7 @@ contract CommunityIssuance is
 
 	address public adminContract;
 
-	bool public isInitialized;
+	bool public isInitialized; //@audit Gas - Uses Initializer modifier from openzeppelin, so this is not required and uses extra gas
 
 	modifier activeStabilityPoolOnly(address _pool) {
 		require(lastUpdateTime[_pool] != 0, "CommunityIssuance: Pool needs to be added first.");
@@ -75,7 +75,7 @@ contract CommunityIssuance is
 		checkContract(_monTokenAddress);
 		checkContract(_stabilityPoolManagerAddress);
 		checkContract(_adminContract);
-		isInitialized = true;
+		isInitialized = true; //@audit Gas - Not required if using the Openzeppelin Initializer modifier, use one or the other
 
 		adminContract = _adminContract;
 
@@ -87,11 +87,13 @@ contract CommunityIssuance is
 	}
 
 	function setAdminContract(address _admin) external onlyOwner {
-		require(_admin != address(0), "Admin address is zero");
+		//@audit Gas - checkContrac() will ensure that the _admin address value is a contract, so it cannot be zero. The require statement can be removed
+		require(_admin != address(0), "Admin address is zero"); 
 		checkContract(_admin);
 		adminContract = _admin;
 	}
 
+	//@audit Low / Informational - Currently the adminContract does not call this function, this will never be called, unless the owner adds funds to the pool directly 
 	function addFundToStabilityPool(address _pool, uint256 _assignedSupply)
 		external
 		override
@@ -111,6 +113,7 @@ contract CommunityIssuance is
 			"CommunityIssuance: Stability Pool doesn't have enough supply."
 		);
 
+		//@audit Gas - Use unchecked on math operations that will not under/overflow
 		MONSupplyCaps[_pool] -= _fundToRemove;
 
 		if (totalMONIssued[_pool] == MONSupplyCaps[_pool]) {

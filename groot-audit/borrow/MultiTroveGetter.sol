@@ -45,7 +45,10 @@ contract MultiTroveGetter {
 			startIdx = uint256(_startIdx);
 			descend = true;
 		} else {
+			//@audit Gas - Use uncheked if the math operation cannot over/underflow
+			unchecked{
 			startIdx = uint256(-(_startIdx + 1));
+			}
 			descend = false;
 		}
 
@@ -70,17 +73,19 @@ contract MultiTroveGetter {
 
 	function _getMultipleSortedTrovesFromHead(
 		address _asset,
-		uint256 _startIdx,
+		uint256 calldata _startIdx, //@audit Gas Pass in as calldata if the value is not going to be changed
 		uint256 _count
 	) internal view returns (CombinedTroveData[] memory _troves) {
 		address currentTroveowner = sortedTroves.getFirst(_asset);
 
+		//@audit Gas - Initialization of default values 
 		for (uint256 idx = 0; idx < _startIdx; ++idx) {
 			currentTroveowner = sortedTroves.getNext(_asset, currentTroveowner);
 		}
 
 		_troves = new CombinedTroveData[](_count);
 
+		//@audit Gas - Initialization of default values 
 		for (uint256 idx = 0; idx < _count; ++idx) {
 			_troves[idx].owner = currentTroveowner;
 			(
@@ -102,17 +107,19 @@ contract MultiTroveGetter {
 
 	function _getMultipleSortedTrovesFromTail(
 		address _asset,
-		uint256 _startIdx,
-		uint256 _count
+		uint256 calldata _startIdx,
+		uint256 calldata _count
 	) internal view returns (CombinedTroveData[] memory _troves) {
 		address currentTroveowner = sortedTroves.getLast(_asset);
-
+		
+		//@audit Gas - Initialization of default values 
 		for (uint256 idx = 0; idx < _startIdx; ++idx) {
 			currentTroveowner = sortedTroves.getPrev(_asset, currentTroveowner);
 		}
 
 		_troves = new CombinedTroveData[](_count);
 
+		//@audit Gas - Initialization of default values 
 		for (uint256 idx = 0; idx < _count; ++idx) {
 			_troves[idx].owner = currentTroveowner;
 			(

@@ -38,7 +38,7 @@ interface IBorrowerOps {
 }
 
 contract DCHFToken is CheckContract, IDCHFToken, Ownable {
-	using SafeMath for uint256; //@note SafeMath is not needed for Solidity version 0.8.0 and above
+	using SafeMath for uint256; //@audit Gas - SafeMath is not needed for Solidity version 0.8.0 and above
 
 	address[] public troveManagers;
 	address[] public borrowerOps;

@@ -10,7 +10,7 @@ import "./Dependencies/DfrancMath.sol";
 import "./Dependencies/Initializable.sol";
 
 contract PriceFeed is Ownable, CheckContract, BaseMath, Initializable, IPriceFeed {
-	using SafeMath for uint256;
+	using SafeMath for uint256; //@audit Gas - SafeMath is not needed for Solidity version 0.8.0 and above
 
 	string public constant NAME = "PriceFeed";
 
@@ -286,9 +286,11 @@ contract PriceFeed is Ownable, CheckContract, BaseMath, Initializable, IPriceFee
 		uint256 price;
 		if (_answerDigits >= TARGET_DIGITS) {
 			// Scale the returned price value down to Dfranc's target precision
+			//@audit Gas - Remove use of safemath library
 			price = _price.div(10**(_answerDigits - TARGET_DIGITS));
 		} else if (_answerDigits < TARGET_DIGITS) {
 			// Scale the returned price value up to Dfranc's target precision
+			//@audit Gas - Remove use of safemath library
 			price = _price.mul(10**(TARGET_DIGITS - _answerDigits));
 		}
 		return price;

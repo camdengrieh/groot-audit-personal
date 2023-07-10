@@ -9,7 +9,7 @@ import "./Dependencies/CheckContract.sol";
 import "./Dependencies/Initializable.sol";
 
 contract HintHelpers is DfrancBase, CheckContract, Initializable {
-	using SafeMath for uint256;
+	using SafeMath for uint256; //@audit Gas - SafeMath is not needed for Solidity version 0.8.0 and above
 	string public constant NAME = "HintHelpers";
 
 	struct LocalRedemptionVars {
@@ -23,7 +23,7 @@ contract HintHelpers is DfrancBase, CheckContract, Initializable {
 	ITroveManager public troveManager;
 	ITroveManagerHelpers public troveManagerHelpers;
 
-	bool public isInitialized;
+	bool public isInitialized; //@audit redundant with Initializable.sol
 
 	// --- Events ---
 
@@ -205,7 +205,7 @@ contract HintHelpers is DfrancBase, CheckContract, Initializable {
 				diff = currentDiff;
 				hintAddress = currentAddress;
 			}
-			i++;
+			i++; //@audit Gas - Use pre-incrementation
 		}
 	}
 

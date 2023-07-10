@@ -44,9 +44,9 @@ import "./Dependencies/Initializable.sol";
  * - Public functions with parameters have been made internal to save gas, and given an external wrapper function for external access
  */
 contract SortedTroves is Ownable, CheckContract, Initializable, ISortedTroves {
-	using SafeMath for uint256;
+	using SafeMath for uint256; //@audit Gas - SafeMath library not needed in Solidity 0.8.0 or newer
 
-	bool public isInitialized;
+	bool public isInitialized; //@audit Gas - Redundant with the use of Openzeppelin's Iniializer.sol
 
 	string public constant NAME = "SortedTroves";
 	address constant ETH_REF_ADDRESS = address(0);
@@ -67,6 +67,7 @@ contract SortedTroves is Ownable, CheckContract, Initializable, ISortedTroves {
 	}
 
 	// Information for the list
+	//@audit Gas - You could pack these variables into three / four storage slots instead of 5. addresses are 160 bits. You can use uint96 on uints that wont have values that exceed max int of that data type
 	struct Data {
 		address head; // Head of the list. Also the node in the list with the largest NICR
 		address tail; // Tail of the list. Also the node in the list with the smallest NICR
@@ -151,6 +152,7 @@ contract SortedTroves is Ownable, CheckContract, Initializable, ISortedTroves {
 		// Node id must not be null
 		require(_id != address(0), "SortedTroves: Id cannot be zero");
 		// NICR must be non-zero
+		//@audit Gas - Use != 0 instead of > 0 
 		require(_NICR > 0, "SortedTroves: NICR must be positive");
 
 		address prevId = _prevId;
@@ -267,6 +269,7 @@ contract SortedTroves is Ownable, CheckContract, Initializable, ISortedTroves {
 		// List must contain the node
 		require(contains(_asset, _id), "SortedTroves: List does not contain the id");
 		// NICR must be non-zero
+		//@audit Gas - Use != 0 instead of > 0 
 		require(_newNICR > 0, "SortedTroves: NICR must be positive");
 
 		// Remove node from the list

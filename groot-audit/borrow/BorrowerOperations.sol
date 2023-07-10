@@ -19,7 +19,7 @@ import "./Dependencies/Initializable.sol";
 
 contract BorrowerOperations is DfrancBase, CheckContract, IBorrowerOperations, Initializable {
 	using SafeMath for uint256;
-	using SafeERC20 for IERC20;
+	using SafeERC20 for IERC20; //@audit - SafeMath is no longer needed in solidity 0.8.0 and above
 
 	string public constant NAME = "BorrowerOperations";
 

@@ -18,7 +18,7 @@ pragma solidity ^0.8.14;
 */
 contract PriceFeedTestnet is IPriceFeed {
     
-    uint256 private _price = 500 * 1e18;
+    uint256 private _price = 500 * 1e18; 
 
     // --- Functions ---
 

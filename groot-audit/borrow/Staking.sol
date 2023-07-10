@@ -10,14 +10,14 @@ contract USDGStaking  {
 
     // Library usage
     using SafeERC20 for IERC20;
-    using SafeMath for uint256;
+    using SafeMath for uint256; //@audit Gas - SafeMath is not needed for Solidity version 0.8.0 and above
     // Contract owner
-    address public owner;
+    address public owner; //@audit Info - Use Openzeppelin Ownable.sol?
     // Store the balance of each user
     mapping (address => uint256) public userBalances;
 
         
-
+    //@audit - This is vague, the values assigned to this variable appear to be block.timestamps, word the variables better
     // Map to store the information of stakers
     mapping(address => uint256) public stakers;
 
@@ -32,7 +32,7 @@ contract USDGStaking  {
 
     
     // Stable Coin USDG 
-    IERC20 public USDG ;
+    IERC20 public USDG ; //@audit Gas - Make immutable if it is set in the constructor and not changed
 
     uint256 public timePeriod = 30 days;
 
@@ -72,32 +72,39 @@ contract USDGStaking  {
         tokensPer100USDT = _tokensPer100USDT ;
     }
 
-
-    // Function to deposit USDT
+    //@audit typo - Function to deposit USDG?
+    // Function to deposit USDT 
     function stake(uint256 amount) public payable {
-        require(USDG.balanceOf(msg.sender)> 0,"INSUFFICIENT BALANCE");
+        //@audit Gas - Use != 0 instead of > 0
+        require(USDG.balanceOf(msg.sender) > 0,"INSUFFICIENT BALANCE"); //@audit Gas - If insufficient, this will revert anyway
         require(amount >= 100000000000000000000, "Amount must be greater 100 USDG");
          // Update the staker's information in the mapping
         stakers[msg.sender] = block.timestamp;
 
         // Update the user balance
+        //@audit Gas - Use unchecked
+        unchecked{
         userBalances[msg.sender] += amount;
+        }
 
         USDG.safeTransferFrom(msg.sender, address(this), amount);
     }
 
-
     // Function to claim the reward
+    //@audit Critical - reentrancy attack - balances are updated after the transfer of the reward token
+
     function unStake() public {
-        require(userBalances[msg.sender] >=100000000000000000000,"UNAUTHORISED NOT A STAKER");
+        require(userBalances[msg.sender] >= 100000000000000000000,"UNAUTHORISED NOT A STAKER");
         // Check if the staker has staked for more than a month
         uint256 stakedTimestamp = stakers[msg.sender];
 
         require(block.timestamp >= stakedTimestamp + timePeriod, "YOU NEED TO WAIT FOR A MONTH");
 
         // Calculate the number of tokens to be received
+        //@audit Gas - Use unchecked
+        unchecked{
         uint256 tokens = userBalances[msg.sender] / 100 * tokensPer100USDT;  
-
+        }
 
         // Update the tokens received by the user
         tokensReceived[msg.sender] += tokens;
@@ -116,6 +123,7 @@ contract USDGStaking  {
 
         userBalances[msg.sender] = 0;
 
+        //@audit-info If this reverts when already deleted, then this will prevent the reentrancy
         delete stakers[msg.sender];
 
     }   

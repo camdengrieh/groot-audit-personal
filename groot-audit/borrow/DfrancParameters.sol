@@ -46,7 +46,7 @@ contract DfrancParameters is IDfrancParameters, Ownable, CheckContract, Initiali
 	IPriceFeed public override priceFeed;
 	address public adminContract;
 
-	bool public isInitialized;
+	bool public isInitialized; //@audit redundant with the use of Initializable.sol
 
 	modifier isController() {
 		require(msg.sender == owner() || msg.sender == adminContract, "Invalid Permissions");

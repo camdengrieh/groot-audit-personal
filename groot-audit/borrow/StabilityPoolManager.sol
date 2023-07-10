@@ -12,7 +12,7 @@ contract StabilityPoolManager is Ownable, CheckContract, Initializable, IStabili
 
 	string public constant NAME = "StabilityPoolManager";
 
-	bool public isInitialized;
+	bool public isInitialized; //@audit Gas / Low - redundant with the use of the Openzeppelin Initializable.sol modifier
 	address public adminContract;
 
 	modifier isController() {

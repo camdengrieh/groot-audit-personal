@@ -14,8 +14,9 @@ This contract is reserved for Linear Vesting to the Team members and the Advisor
 */
 contract LockedMON is Ownable, ReentrancyGuard, CheckContract {
 	using SafeERC20 for IERC20;
-	using SafeMath for uint256;
+	using SafeMath for uint256; //@audit Gas - Safemath library not required for Solidity 0.8.0 or newer
 
+	//@audit Gas - Use storage slot packing if the variables can use smaller uint types like uint64 createdDate
 	struct Rule {
 		uint256 createdDate;
 		uint256 totalSupply;
@@ -54,8 +55,9 @@ contract LockedMON is Ownable, ReentrancyGuard, CheckContract {
 	{
 		require(_entities.length == _totalSupplies.length, "Array length missmatch");
 
-		uint256 _sumTotalSupplies = 0;
+		uint256 _sumTotalSupplies = 0; //@audit Gas - Initialization of default values
 
+		//@audit Gas - Initialisation of default values and use pre-incrementation instead of post-incrementation
 		for (uint256 i = 0; i < _entities.length; i++) {
 			address _entity = _entities[i];
 			uint256 _totalSupply = _totalSupplies[i];
@@ -64,6 +66,7 @@ contract LockedMON is Ownable, ReentrancyGuard, CheckContract {
 
 			require(entitiesVesting[_entity].createdDate == 0, "Entity already has a Vesting Rule");
 
+			//@audit Gas - Remove use of SafeMath library
 			entitiesVesting[_entity] = Rule(
 				block.timestamp,
 				_totalSupply,
@@ -72,8 +75,10 @@ contract LockedMON is Ownable, ReentrancyGuard, CheckContract {
 				0
 			);
 
+			//@audit Gas - Use unchecked on math operations
 			_sumTotalSupplies += _totalSupply;
 		}
+		//@audit Gas - Use unchecked on math operations
 
 		assignedMONTokens += _sumTotalSupplies;
 
@@ -85,11 +90,13 @@ contract LockedMON is Ownable, ReentrancyGuard, CheckContract {
 
 		require(entitiesVesting[_entity].createdDate == 0, "Entity already has a Vesting Rule");
 
+		//@audit Gas - Use unchecked on math operations
 		assignedMONTokens += _totalSupply;
 
 		entitiesVesting[_entity] = Rule(
 			block.timestamp,
 			_totalSupply,
+			//@audit Gas - remove use of SafeMath Library
 			block.timestamp.add(ONE_YEAR),
 			block.timestamp.add(TWO_YEARS),
 			0
@@ -140,8 +147,11 @@ contract LockedMON is Ownable, ReentrancyGuard, CheckContract {
 		if (unclaimedAmount == 0) return;
 
 		Rule storage entityRule = entitiesVesting[_entity];
+		
+		//@audit Gas - Wrap in unchecked
 		entityRule.claimed += unclaimedAmount;
 
+		//@audit Gas - Remove use of SafeMath library 
 		assignedMONTokens = assignedMONTokens.sub(unclaimedAmount);
 		monToken.safeTransfer(_entity, unclaimedAmount);
 	}
@@ -156,11 +166,14 @@ contract LockedMON is Ownable, ReentrancyGuard, CheckContract {
 
 	function getClaimableMON(address _entity) public view returns (uint256 claimable) {
 		Rule memory entityRule = entitiesVesting[_entity];
-		claimable = 0;
+
+		claimable = 0; //@audit Gas - Initialization of default vaules not necessary
+
 
 		if (entityRule.startVestingDate > block.timestamp) return claimable;
 
 		if (block.timestamp >= entityRule.endVestingDate) {
+			//@audit Gas - remove use of the SafeMath Library
 			claimable = entityRule.totalSupply.sub(entityRule.claimed);
 		} else {
 			claimable = entityRule
@@ -174,6 +187,8 @@ contract LockedMON is Ownable, ReentrancyGuard, CheckContract {
 	}
 
 	function getUnassignMONTokensAmount() public view returns (uint256) {
+	//@audit Gas - remove use of the SafeMath Library
+
 		return monToken.balanceOf(address(this)).sub(assignedMONTokens);
 	}
 

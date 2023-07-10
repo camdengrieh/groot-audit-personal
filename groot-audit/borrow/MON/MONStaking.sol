@@ -26,7 +26,7 @@ contract MONStaking is
 	Initializable
 {
 	using SafeMath for uint256;
-	using SafeERC20 for IERC20;
+	using SafeERC20 for IERC20; //@audit Gas - not rquired in Solidity version 0.8.0 or greater
 
 	bool public isInitialized;
 
@@ -71,6 +71,7 @@ contract MONStaking is
 		address _activePoolAddress,
 		address _treasury
 	) external override initializer {
+		//@audit Gas / Low - Already using the Openzeppelin Initializer - Use one or the other
 		require(!isInitialized, "Already Initialized");
 		require(_treasury != address(0), "Invalid Treausry Address");
 		checkContract(_monTokenAddress);
@@ -102,6 +103,7 @@ contract MONStaking is
 
 	// If caller has a pre-existing stake, send any accumulated ETH and DCHF gains to them.
 	function stake(uint256 _MONamount) external override nonReentrant whenNotPaused {
+		//@audit Gas - Using != 0 is cheaper in gas
 		require(_MONamount > 0, "MON amount is zero");
 
 		uint256 currentStake = stakes[msg.sender];
@@ -110,6 +112,7 @@ contract MONStaking is
 		uint256 AssetGain;
 		address asset;
 
+		//@audit Gas - Initilazation of default values and use pre-incrementations instead of post incrementation
 		for (uint256 i = 0; i < assetLength; i++) {
 			asset = ASSET_TYPE[i];
 
@@ -130,6 +133,7 @@ contract MONStaking is
 			_updateUserSnapshots(asset, msg.sender);
 		}
 
+		//@audit Gas - Remove use of the SafeMath Library 
 		uint256 newStake = currentStake.add(_MONamount);
 
 		// Increase user’s stake and total MON staked
@@ -153,6 +157,7 @@ contract MONStaking is
 		uint256 AssetGain;
 		address asset;
 
+		//@audit gas - Initiliazation of default values and use pre-incrementation instead of post-incrementation
 		for (uint256 i = 0; i < assetLength; i++) {
 			asset = ASSET_TYPE[i];
 
@@ -171,13 +176,16 @@ contract MONStaking is
 			_sendAssetGainToUser(asset, AssetGain);
 		}
 
+		//@audit Gas - Using != 0 is cheaper in gas
 		if (_MONamount > 0) {
 			uint256 MONToWithdraw = DfrancMath._min(_MONamount, currentStake);
+			//@audit Gas - Remove use of SafeMath library
 
 			uint256 newStake = currentStake.sub(MONToWithdraw);
 
 			// Decrease user's stake and total MON staked
 			stakes[msg.sender] = newStake;
+			//@audit Gas - Remove use of SafeMath library
 			totalMONStaked = totalMONStaked.sub(MONToWithdraw);
 			emit TotalMONStakedUpdated(totalMONStaked);
 
@@ -221,6 +229,7 @@ contract MONStaking is
 
 		uint256 AssetFeePerMONStaked;
 
+		//@audit Gas - Using != 0 is cheaper in gas
 		if (totalMONStaked > 0) {
 			AssetFeePerMONStaked = _AssetFee.mul(DECIMAL_PRECISION).div(totalMONStaked);
 		}
@@ -236,17 +245,20 @@ contract MONStaking is
 		}
 
 		uint256 DCHFFeePerMONStaked;
-
+		
+		//@audit Gas - Using != 0 is cheaper in gas
 		if (totalMONStaked > 0) {
+			//@audit Gas - Remove use of the SafeMath library 
 			DCHFFeePerMONStaked = _DCHFFee.mul(DECIMAL_PRECISION).div(totalMONStaked);
 		}
-
+		//@audit Gas - Remove use of the SafeMath library 
 		F_DCHF = F_DCHF.add(DCHFFeePerMONStaked);
 		emit F_DCHFUpdated(F_DCHF);
 	}
 
 	function sendToTreasury(address _asset, uint256 _amount) internal {
 		_sendAsset(treasury, _asset, _amount);
+		//@audit Gas - Use unchecked for math operations that cannot over/underflow 
 		sentToTreasuryTracker[_asset] += _amount;
 
 		emit SentToTreasury(_asset, _amount);
@@ -269,6 +281,7 @@ contract MONStaking is
 		returns (uint256)
 	{
 		uint256 F_ASSET_Snapshot = snapshots[_user].F_ASSET_Snapshot[_asset];
+		//@audit Gas - Remove use of SafeMath library
 		uint256 AssetGain = stakes[_user].mul(F_ASSETS[_asset].sub(F_ASSET_Snapshot)).div(
 			DECIMAL_PRECISION
 		);
@@ -281,6 +294,7 @@ contract MONStaking is
 
 	function _getPendingDCHFGain(address _user) internal view returns (uint256) {
 		uint256 F_DCHF_Snapshot = snapshots[_user].F_DCHF_Snapshot;
+		//@audit Gas - Remove use of SafeMath library
 		uint256 DCHFGain = stakes[_user].mul(F_DCHF.sub(F_DCHF_Snapshot)).div(DECIMAL_PRECISION);
 		return DCHFGain;
 	}
@@ -333,6 +347,7 @@ contract MONStaking is
 	}
 
 	function _requireUserHasStake(uint256 currentStake) internal pure {
+		//@audit Gas - Using != 0 is cheaper than > 0
 		require(currentStake > 0, "MONStaking: User must have a non-zero stake");
 	}
 
